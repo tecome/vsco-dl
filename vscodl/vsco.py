@@ -23,6 +23,14 @@ def get_medias(session: Session, uid: str, site_id: str, size: int, page: int) -
     ).json()
 
 
-def download_url(session: Session, url: str) -> Response:
+def get_articles(session: Session, uid: str, site_id: str, size: int, page: int) -> object:
+    """Gets paginated articles of user."""
+    return session.get(
+        constants.VSCO_URL + "/ajxp/{}/2.0/articles?site_id={}&size={}&page={}".format(uid, site_id, size, page),
+        headers={"Referer": constants.VSCO_URL, "User-Agent": constants.USER_AGENT}
+    ).json()
+
+
+def download_url(session: Session, url: str, use_host_header=True) -> Response:
     """Sends response for downloading media."""
-    return session.get(url, headers={"Host": constants.VSCO_IMAGE_SITENAME})
+    return session.get(url, headers={"Host": constants.VSCO_IMAGE_SITENAME} if use_host_header else {})

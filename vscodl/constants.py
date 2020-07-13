@@ -1,4 +1,4 @@
-VERSION = "0.1.1"
+VERSION = "0.2.0"
 
 VSCO_URL = "https://vsco.co"
 VSCO_SITENAME = "vsco.co"
