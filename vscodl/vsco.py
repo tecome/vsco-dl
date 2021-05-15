@@ -1,5 +1,5 @@
-import constants
 from requests import Session, Response
+from vscodl import constants
 
 
 def user_info(session: Session) -> Response:
