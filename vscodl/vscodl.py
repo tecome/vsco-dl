@@ -5,7 +5,6 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 
 from vscodl import constants, vsco
-import constants
 import requests
 from tqdm import tqdm
 
