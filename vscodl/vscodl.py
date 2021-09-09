@@ -4,9 +4,10 @@ import concurrent.futures
 import os
 from concurrent.futures import ThreadPoolExecutor
 
-from vscodl import constants, vsco
 import requests
 from tqdm import tqdm
+
+from vscodl import constants, vsco
 
 
 class Scraper:
@@ -26,6 +27,7 @@ class Scraper:
         self.has_collection = False
         self.images = []
         self.journals = []
+        self.profile_image_url = None
 
         # Progress bars
         self.find_progress = None
@@ -47,6 +49,15 @@ class Scraper:
         if not os.access(path, os.W_OK):
             raise RuntimeError("{} is not writable!".format(path))
 
+    @staticmethod
+    def file_exists(filename, upload_timestamp=None) -> bool:
+        l = os.listdir()
+        if filename in l:
+            return True
+        if upload_timestamp is not None and (f"{upload_timestamp}.jpg" in l or f"{upload_timestamp}.mp4" in l):
+            return True
+        return False
+
     def prepare_main_dir(self) -> None:
         """Prepares main download directory"""
         path = self.output_dir.replace("%u", self.username) if self.output_dir else self.username
@@ -66,6 +77,7 @@ class Scraper:
             info = vsco.get_sites(self.session, self.uid, self.username)[0]
             self.site_id = info["id"]
             self.has_collection = info["has_collection"]
+            self.profile_image_url = info["profile_image"].split("?")[0]
         return self.site_id
 
     def fetch_media_urls(self, page) -> list:
@@ -87,8 +99,7 @@ class Scraper:
 
                 destination = self.get_media_filename(source, upload_timestamp, ext)
 
-                if destination in os.listdir() or "{}.jpg".format(upload_timestamp) in os.listdir() or \
-                        "{}.mp4".format(upload_timestamp) in os.listdir():
+                if self.file_exists(destination, upload_timestamp):
                     continue
 
                 # Tuple of source, destination
@@ -132,6 +143,17 @@ class Scraper:
             page += self.workers
         return found
 
+    def fetch_profile_image(self, url):
+        r = self.session.get(url)
+        if r.status_code == 200:
+            # Get final url from redirect
+            filename = os.path.basename(r.url)
+            destination = self.get_media_filename(filename, 0, filename[-3:])
+            if not self.file_exists(destination, 0):
+                self.find_progress.update()
+                return [(r.url, destination)]
+        return []
+
     def download_images(self) -> bool:
         """Downloads images/videos of a user."""
         cwd = os.getcwd()
@@ -142,12 +164,17 @@ class Scraper:
         self.find_progress = tqdm(desc="{} - Finding images".format(self.username), unit=" images")
         with ThreadPoolExecutor(max_workers=self.workers) as tpe:
             futures = [tpe.submit(self.fetch_media_urls, page) for page in range(self.workers)]
+
+            # Download profile image if there is one
+            if self.profile_image_url:
+                futures.append(tpe.submit(self.fetch_profile_image, self.profile_image_url))
+
             for future in concurrent.futures.as_completed(futures):
                 self.images += future.result()
         self.find_progress.close()
 
         # Download media
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.workers) as tpe:
+        with ThreadPoolExecutor(max_workers=self.workers) as tpe:
             futures = {tpe.submit(self.download_file, file): file for file in self.images}
             for future in tqdm(concurrent.futures.as_completed(futures), total=len(self.images),
                                desc="{} - Downloading images".format(self.username), unit=" images"):
