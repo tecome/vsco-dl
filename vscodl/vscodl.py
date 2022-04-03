@@ -76,7 +76,7 @@ class Scraper:
         if self.site_id is None:
             info = vsco.get_sites(self.session, self.uid, self.username)[0]
             self.site_id = info["id"]
-            self.has_collection = info["has_collection"]
+            self.has_collection = info["has_collection"] if "has_collection" in info else False
             self.profile_image_url = info["profile_image"].split("?")[0]
         return self.site_id
 
