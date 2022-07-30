@@ -154,7 +154,7 @@ class Scraper:
                 return [(r.url, destination)]
         return []
 
-    def download_images(self) -> bool:
+    def download_images(self):
         """Downloads images/videos of a user."""
         cwd = os.getcwd()
         self.get_site_id()
@@ -173,6 +173,9 @@ class Scraper:
                 self.images += future.result()
         self.find_progress.close()
 
+        if not self.images:
+            return
+
         # Download media
         with ThreadPoolExecutor(max_workers=self.workers) as tpe:
             futures = {tpe.submit(self.download_file, file): file for file in self.images}
@@ -183,13 +186,11 @@ class Scraper:
                 except Exception as e:
                     print("Failed to download {}:".format(futures[future][0]), e)
         os.chdir(cwd)
-        return True
 
-    def download_journals(self) -> bool:
+    def download_journals(self):
         """Downloads journals of a user."""
         cwd = os.getcwd()
         self.get_site_id()
-        self.prepare_journal_dir()
 
         # Find journal image/video/text files
         self.find_progress = tqdm(desc="{} - Finding journal posts".format(self.username), unit=" journal posts")
@@ -198,6 +199,11 @@ class Scraper:
             for future in concurrent.futures.as_completed(futures):
                 self.journals += future.result()
         self.find_progress.close()
+
+        if not self.journals:
+            return
+
+        self.prepare_journal_dir()
 
         # Download
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.workers) as tpe:
@@ -209,7 +215,6 @@ class Scraper:
                 except Exception as e:
                     print("Failed to download {}:".format(futures[future][0]), e)
         os.chdir(cwd)
-        return True
 
     def download_file(self, file) -> bool:
         """Downloads a file."""
