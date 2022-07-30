@@ -19,7 +19,7 @@ class Scraper:
         self.session = requests.Session()
 
         # Send request to get cookie which is required later
-        vsco.user_info(self.session)
+        vsco.init(self.session)
         self.uid = self.session.cookies.get_dict()["vs"]
 
         # VSCO user information

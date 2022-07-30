@@ -2,10 +2,10 @@ from requests import Session, Response
 from vscodl import constants
 
 
-def user_info(session: Session) -> Response:
-    """User about currently logged-in user"""
+def init(session: Session) -> Response:
+    """Request to set necessary VSCO cookies."""
     return session.get(
-        constants.VSCO_URL + "/content/Static/userinfo",
+        constants.VSCO_URL + "/ajx/gallery",
         headers={"Referer": constants.VSCO_URL, "User-Agent": constants.USER_AGENT}
     )
 
